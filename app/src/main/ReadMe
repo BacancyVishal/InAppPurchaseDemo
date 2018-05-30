@@ -1,0 +1,152 @@
+
+Step 1 : Add this in gradle...
+
+dependencies {
+    ...
+    implementation 'com.android.billingclient:billing:1.1'
+}
+
+Step 2 : Create an instance of BillingClient
+
+// create new Person
+private BillingClient mBillingClient;
+...
+mBillingClient = BillingClient.newBuilder(mActivity).setListener(this).build();
+mBillingClient.startConnection(new BillingClientStateListener() {
+    @Override
+    public void onBillingSetupFinished(@BillingResponse int billingResponseCode) {
+        if (billingResponseCode == BillingResponse.OK) {
+            // The billing client is ready. You can query purchases here.
+        }
+    }
+    @Override
+    public void onBillingServiceDisconnected() {
+        // Try to restart the connection on the next request to
+        // Google Play by calling the startConnection() method.
+    }
+});
+
+Step 3 : Implement PurchasesUpdatedListener's onPurchasesUpdated() method to receive updates on purchases initiated by your app, as well as those initiated by the Google Play Store.
+
+//========================================//
+//                                        //
+//    Purchase in-app product details     //
+//                                        //
+//========================================//
+
+Step 4 : To start a purchase request from your app, call the launchBillingFlow() method from the UI thread.
+    Pass a reference to a BillingFlowParams object containing the relevant data to complete the purchase, such as the product ID (skuId) of the item and product type (SkuType.INAPP for a one-time product or SkuType.SUBS for a subscription).
+
+        When you call the launchBillingFlow() method, the system displays the Google Play purchase screen.
+
+//========================================//
+//                                        //
+//    Query for in-app product details    //
+//                                        //
+//========================================//
+
+Step 5 : To query Google Play for in-app product details, call the querySkuDetailsAsync() method.
+
+    When calling this method, pass an instance of SkuDetailsParams that specifies a list of products ID strings and a SkuType.
+    The SkuType can be either SkuType.INAPP for one-time products, or SkuType.SUBS, for subscriptions.
+
+//========================================//
+//                                        //
+//     Query most recent purchases        //
+//                                        //
+//========================================//
+
+The queryPurchases() method uses a cache of the Google Play Store app without initiating a network request.
+
+If you need to check the most recent purchase made by the user for each product ID, you can use the queryPurchaseHistoryAsync() method.
+
+queryPurchaseHistoryAsync() returns the most recent purchase made by the user for each product ID, even if that purchase is expired, cancelled, or consumed.
+
+//========================================//
+//                                        //
+//           verify purchase              //
+//                                        //
+//========================================//
+
+Step 6 : To verify purchase
+
+================== By a secure backend server =====================
+
+To verify purchase details on a secure backend server, complete the following steps:
+
+1. From you app, send the purchase token and user account credential to your secure backend server. The secure backend server should associate the purchase with the user after verification has succeeded.
+
+2. After you get the token from the app:
+
+a. Use the Subscriptions and In-App Purchases portion of the Google Play Developer API to perform a GET request to retrieve the purchase details from Google Play (Purchases.products for a one-time product purchase or Purchases.subscriptions for a subscription). The GET request includes the app package name, product ID, and a token (purchase token).
+
+b. Google Play returns the purchase details.
+
+c. The secure backend server verifies that the order ID is a unique value that doesn’t represent a previous purchase.
+
+d. The secure backend server uses the user account credential received in step 1 to associate the purchase token with the user of the app instance where the purchase was made.
+
+e. (optional) If you are validating a subscription and the subscription is being upgraded, downgraded, or the user has re-subscribed before the subscription has lapsed, check the linkedPurchaseToken field. The linkedPurchaseToken field in a Purchases.subscriptions resource contains the token of the previous, or “originating” purchase. For more about linkedPurchaseToken, refer to Purchases.subscriptions).
+
+f. The in-app product is made available to the user.
+
+================== On a device =====================
+
+To help ensure the integrity of the transaction information that is sent to your application,
+Google Play signs the JSON string that contains the response data for a purchase.
+Google Play uses the private key that is associated with your application in the Play Console to create this signature.
+The Play Console generates an RSA key pair for each application.
+You will get this response JSON using the getOriginalJson() method within the Purchase class.
+
+When your application receives this signed response, you can use the public key portion of your RSA key pair to verify the signature. By performing signature verification,
+you can detect any responses that have been tampered with or that have been spoofed.
+
+Warning: This form of verification isn't truly secure because it requires you to bundle purchase verification logic within your app.
+This logic becomes compromised if your app is reverse-engineered.
+
+You should obfuscate your Google Play public key and Google Play Billing code so it's difficult for an attacker to reverse-engineer security protocols and other application components.
+At a minimum, we recommend that you run an obfuscation tool like Proguard on your code.
+To obfuscate your code using Proguard, you must add the following line to your Proguard configuration file:
+
+-keep class com.android.vending.billing.**
+
+
+//========================================//
+//                                        //
+//      Possible response codes.          //
+//                                        //
+//========================================//
+
+Constants
+int	BILLING_UNAVAILABLE
+Billing API version is not supported for the type requested
+
+int	DEVELOPER_ERROR
+Invalid arguments provided to the API.
+
+int	ERROR
+Fatal error during the API action
+
+int	FEATURE_NOT_SUPPORTED
+Requested feature is not supported by Play Store on the current device.
+
+int	ITEM_ALREADY_OWNED
+Failure to purchase since item is already owned
+
+int	ITEM_NOT_OWNED
+Failure to consume since item is not owned
+
+int	ITEM_UNAVAILABLE
+Requested product is not available for purchase
+
+int	OK
+Success
+
+int	SERVICE_DISCONNECTED
+Play Store service is not connected now - potentially transient state.
+
+int	SERVICE_UNAVAILABLE
+Network connection is down
+
+int	USER_CANCELED
+User pressed back or canceled a dialog
